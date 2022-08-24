@@ -1,6 +1,10 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
+import { ClearedField } from './clearedfield';
 import { Field } from './field';
+import { FieldSize } from './field-size';
+import { Position } from './position';
+import { RevealBombsResponse } from './response/revealBombsResponse';
 
 @Injectable({
   providedIn: 'root'
@@ -9,22 +13,29 @@ export class GameStateService {
 
   public restart$: BehaviorSubject<any> = new BehaviorSubject(null);
   public gameOver$: BehaviorSubject<any> = new BehaviorSubject(null);
-  public setFieldSize$: BehaviorSubject<number> = new BehaviorSubject(9);
   public timer$: BehaviorSubject<number> = new BehaviorSubject(0);
   public clickCount$: BehaviorSubject<number> = new BehaviorSubject(0);
-  public findAllFields$: BehaviorSubject<Field> = new BehaviorSubject(new Field(-1, -1));
-  public checkFields$: BehaviorSubject<any> = new BehaviorSubject(null);
+  public revealBombs$: BehaviorSubject<RevealBombsResponse> = new BehaviorSubject(new RevealBombsResponse([]));
+  public revealClearedField$: BehaviorSubject<ClearedField> = new BehaviorSubject(new ClearedField(new Position(-1, -1), -1));
+
 
   public timeInSec: number = 0;
   public timerInterval: any = undefined;
   public clicks: number = 0;
   public gameOverBool: boolean = false;
   public clearedAllFields: boolean = false;
+  
+  public gameId: string = "";
+  public fieldSize: FieldSize = FieldSize.Small;
 
   constructor() { }
 
-  public checkClearedAllFields(): boolean {
-    return this.clearedAllFields;
+  public revealClearedField(clearedField: ClearedField): void {
+    this.revealClearedField$.next(clearedField);
+  }
+
+  public revealBombsField(revealBombs: RevealBombsResponse): void {
+    this.revealBombs$.next(revealBombs);
   }
 
   public restartGame(): void {
@@ -35,12 +46,8 @@ export class GameStateService {
     this.gameOver$.next(null);
   }
 
-  public findAllFields(fild: Field): void {
-    this.findAllFields$.next(fild);
-  }
-
   public setFieldSize(fieldSize: number): void {
-    this.setFieldSize$.next(fieldSize);
+    this.fieldSize = fieldSize;
   }
 
   public startTimer(): void {
@@ -61,6 +68,7 @@ export class GameStateService {
   public resetTimer(): void {
     this.timeInSec = 0;
     this.timer$.next(this.timeInSec);
+    this.stopTimer();
   }
 
   public click(): void {

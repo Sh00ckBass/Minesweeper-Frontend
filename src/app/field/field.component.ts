@@ -1,8 +1,12 @@
 import { Component, Input, OnInit } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import { ClearedFieldsComponent } from '../cleared-fields/cleared-fields.component';
+import { ClearedField } from '../shared/clearedfield';
 import { Field } from '../shared/field';
 import { GameStateService } from '../shared/game-state.service';
+import { GameService } from '../shared/game.service';
+import { Position } from '../shared/position';
+import { RevealFieldRequest } from '../shared/request/revealFieldRequest';
 
 @Component({
   selector: 'app-field',
@@ -16,30 +20,63 @@ export class FieldComponent implements OnInit {
 
   constructor(
     public gameState: GameStateService,
+    public gameService: GameService,
     public dialog: MatDialog
   ) { }
 
   ngOnInit(): void {
   }
 
-  public checkBomb(field: Field): void {
+  public revealField(field: Field): void {
     if (field.bombMark || this.gameState.gameOverBool) {
       return;
     }
     this.gameState.startTimer();
-    this.gameState.click();
-    field.visible = true;
-    this.gameState.findAllFields(field);
-    if (field.bomb) {
-      this.gameState.gameOverBool = true;
-      this.gameState.gameOver();
-    }
-    
-    this.gameState.checkFields$.next(null);
-    if (!this.gameState.checkClearedAllFields()) {
-      return;
-    }
-    this.dialog.open(ClearedFieldsComponent);
+    this.gameService.revealField(new RevealFieldRequest(this.gameState.gameId, new Position(field.x, field.y))).subscribe((response) => {
+      var gameState: number = response.gameState;
+      var revealResult: number = response.revealResult;
+      var bombCount: number = response.bombCount;
+      var clearedFields: ClearedField[] = response.clearedFields;
+      switch (gameState) {
+        case 0:
+          {
+            if (!field.visible) {
+              this.gameState.click();
+              if (revealResult == 0) {
+                field.bombCount = bombCount;
+                field.visible = true;
+                if (clearedFields != null) {
+                  clearedFields.forEach((clearedField) => {
+                    this.gameState.revealClearedField(clearedField);
+                  });
+                }
+              }
+            }
+            break;
+          }
+        case 1:
+          {
+            this.gameState.stopTimer();
+            this.gameState.click();
+            field.bombCount = bombCount;
+            field.visible = true;
+            this.gameState.gameOverBool = true;
+            this.dialog.open(ClearedFieldsComponent);
+            break;
+          }
+        case 2:
+          {
+            field.bomb = true;
+            field.visible = true;
+            this.gameState.gameOver();
+            this.gameService.revealBombs(this.gameState.gameId).subscribe((response) => {
+              this.gameState.revealBombsField(response);
+            });
+            break;
+          }
+      }
+
+    });
   }
 
   public markBomb(event: any, field: Field): void {

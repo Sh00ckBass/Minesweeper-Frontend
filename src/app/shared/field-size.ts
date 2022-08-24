@@ -1,5 +1,5 @@
 export enum FieldSize {
-    Small=9,
-    Medium=16,
-    Large=22
+    Small=0,
+    Medium=1,
+    Large=2
 }
