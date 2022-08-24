@@ -1,0 +1,17 @@
+app-playfield {
+    display: flex;
+    justify-content: center;
+}
+
+app-buttons {
+    display: flex;
+    justify-content: center;
+    padding-top: 10px;
+}
+
+app-topbar {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    padding-top: 10px;
+}

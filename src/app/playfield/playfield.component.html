@@ -1,0 +1,7 @@
+<table>
+    <tr *ngFor="let row of playField">
+        <td *ngFor="let field of row">
+            <app-field [field]="field"></app-field>
+        </td>
+    </tr>
+</table>

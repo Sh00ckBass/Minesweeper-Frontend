@@ -1,0 +1,45 @@
+.fieldCss {
+    background-color: blue;
+    border: none;
+    border-radius: 5px 5px;
+    text-decoration: none;
+    font-weight: bolder;
+    width: 60px;
+    height: 60px;
+
+    cursor: url("spaten.png"), auto;
+}
+
+label {
+    font-size: large;
+    font-weight: bold;
+}
+
+.red {
+    color: red;
+}
+
+.darkred {
+    color: darkred;
+}
+
+.green {
+    color: green;
+}
+
+.blue {
+    color: blue;
+}
+
+.bomb {
+    background-color: red;
+    font-size: 30px;
+}
+
+.emptyField {
+    background-color: gray;
+}
+
+.bombMark {
+    font-size: 30px;
+}

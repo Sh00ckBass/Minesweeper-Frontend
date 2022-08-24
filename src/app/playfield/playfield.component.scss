@@ -1,0 +1,40 @@
+.field {
+    background-color: blue;
+    border: none;
+    border-radius: 5px 5px;
+    text-decoration: none;
+    font-weight: bolder;
+    width: 60px;
+    height: 60px;
+
+    cursor: grab;
+}
+
+label {
+    font-size: large;
+    font-weight: bold;
+}
+
+.red {
+    color: red;
+}
+
+.green {
+    color: green;
+}
+
+.blue {
+    color: blue;
+}
+
+.bomb {
+    background-color: red;
+}
+
+.emptyField {
+    background-color: gray;
+}
+
+.bombMark {
+    background-color: lightgreen;
+}

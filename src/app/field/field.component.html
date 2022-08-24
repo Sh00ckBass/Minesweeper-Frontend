@@ -1,0 +1,20 @@
+<button class="fieldCss" (click)="checkBomb(field)" (contextmenu)="markBomb($event, field)"
+    [ngClass]="{'bomb': field.exploded, 'emptyField': field.empty}">
+    <ng-container *ngIf="field.empty && (field.bombCount > 0)">
+        <label [ngClass]="{
+                    'blue': (field.bombCount == 1), 
+                    'green': (field.bombCount == 2), 
+                    'red': (field.bombCount == 3),
+                    'darkred': (field.bombCount >= 4)
+                    }">{{field.bombCount}}</label>
+    </ng-container>
+    <ng-container *ngIf="field.bombMark && !field.visible">
+        <label class="bombMark">🚩</label>
+    </ng-container>
+    <ng-container *ngIf="field.exploded">
+        <label class="bomb">💣</label>
+    </ng-container>
+    <ng-container *ngIf="!field.visible || field.empty">
+        &nbsp;
+    </ng-container>
+</button>
