@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { MatDialogRef } from '@angular/material/dialog';
-import { FieldComponent } from '../field/field.component';
 import { GameStateService } from '../shared/game-state.service';
+import { GameService } from '../shared/game.service';
 
 @Component({
   selector: 'app-cleared-fields',
@@ -11,7 +11,7 @@ import { GameStateService } from '../shared/game-state.service';
 export class ClearedFieldsComponent implements OnInit {
 
   constructor(
-    public dialogRef: MatDialogRef<FieldComponent>,
+    public dialogRef: MatDialogRef<GameService>,
     public gameState: GameStateService
   ) { }
 

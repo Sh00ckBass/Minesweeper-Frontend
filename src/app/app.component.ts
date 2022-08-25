@@ -1,5 +1,8 @@
-import { Component } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Component, OnInit } from '@angular/core';
+import { environment } from 'src/environments/environment';
 import { GameService } from './shared/game.service';
+import { SignalrService } from './shared/websockets/signalr.service';
 
 @Component({
   selector: 'app-root',
@@ -8,22 +11,8 @@ import { GameService } from './shared/game.service';
 })
 export class AppComponent {
   title = 'minesweeper';
-  apiOnline = false;
-  constructor(public gameService: GameService) {
-    this.checkApi();
-    setInterval(() => {
-      this.checkApi();
-    }, 1000*20);
-  }
+  constructor(
+  ) {
 
-  private checkApi(): void {
-    this.gameService.checkApi().subscribe(()=>{},(error) => {
-      if(error.status == 404) {
-        this.apiOnline = true;
-      } else {
-        this.apiOnline = false;
-      }
-    });
   }
-
 }

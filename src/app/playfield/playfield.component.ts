@@ -7,6 +7,7 @@ import { GameService } from '../shared/game.service';
 import { FieldSize } from '../shared/field-size';
 import { ClearedField } from '../shared/clearedfield';
 import { RevealBombsResponse } from '../shared/response/revealBombsResponse';
+import { SignalrService } from '../shared/websockets/signalr.service';
 
 @Component({
   selector: 'app-playfield',
@@ -19,17 +20,38 @@ export class PlayfieldComponent implements OnInit {
   private size: number = 9;
 
   constructor(
-    private gameStateService: GameStateService,
+    private gameState: GameStateService,
     private gameService: GameService,
-    public dialog: MatDialog
+    public dialog: MatDialog,
+    public signalR: SignalrService,
+    public signalRService: SignalrService
   ) {
+    this.signalRService.startConnection();
+    this.signalRService.addStartGame();
+    this.signalRService.addRevealField();
+    this.signalRService.addRevealBombs();
   }
 
   ngOnInit(): void {
-    this.gameStateService.restart$.subscribe(() => this.resetGame());
-    this.gameStateService.gameOver$.subscribe(() => this.onGameOver());
-    this.gameStateService.revealClearedField$.subscribe((clearedField) => this.revealClearedField(clearedField));
-    this.gameStateService.revealBombs$.subscribe((bombsResponse) => this.revealBombs(bombsResponse));
+    setTimeout(() => this.register(), 1000);
+  }
+
+  private register(): void {
+    this.gameState.updateField$.subscribe((value) => this.updateField(value.x, value.y, value.bombCount, value.bomb, value.visible));
+    this.gameState.restart$.subscribe(() => this.resetGame());
+    this.gameState.gameOver$.subscribe(() => this.onGameOver());
+    this.gameState.revealClearedField$.subscribe((clearedField) => this.revealClearedField(clearedField));
+    this.gameState.revealBombs$.subscribe((bombsResponse) => this.revealBombs(bombsResponse));
+  }
+
+  public updateField(x: number, y: number, bombCount: number, bomb: boolean, visible: boolean): void {
+    if (x < 0 || y < 0 || x > this.size || y > this.size) {
+      return;
+    }
+    var field = this.playField[y][x];
+    field.bombCount = bombCount;
+    field.bomb = bomb;
+    field.visible = visible;
   }
 
   public initializeField(): void {
@@ -45,13 +67,17 @@ export class PlayfieldComponent implements OnInit {
   }
 
   public resetGame(): void {
-    this.gameStateService.resetTimer();
-    this.gameStateService.resetClicks();
-    this.gameStateService.gameOverBool = false;
+    this.gameState.resetTimer();
+    this.gameState.resetClicks();
+    this.gameState.gameOverBool = false;
 
-    this.gameService.startGame(this.gameStateService.fieldSize).subscribe((response) => {
-      this.gameStateService.gameId = response;
-    });
+    if (!this.gameState.signalR) {
+      this.gameService.startGame(this.gameState.fieldSize).subscribe((response) => {
+        this.gameState.gameId = response;
+      });
+    } else {
+      this.signalR.startGame(this.gameState.fieldSize);
+    }
     this.initializeField();
   }
 
@@ -72,23 +98,23 @@ export class PlayfieldComponent implements OnInit {
       var x: number = pos.x;
       var y: number = pos.y;
       var bombField: Field = this.playField[y][x];
-      
+
       bombField.bomb = true;
       bombField.visible = true;
     })
   }
 
   public onGameOver(): void {
-    if (this.gameStateService.timeInSec == 0) {
+    if (!this.gameState.gameOverBool) {
       return;
     }
-    this.gameStateService.stopTimer();
-    this.gameStateService.gameOverBool = true;
     this.dialog.open(GameoverComponent);
+    this.gameState.stopTimer();
+    this.gameState.gameOverBool = true;
   }
 
   private changeFieldSize(): void {
-    switch (this.gameStateService.fieldSize) {
+    switch (this.gameState.fieldSize) {
       case FieldSize.Small:
         {
           this.size = 9;

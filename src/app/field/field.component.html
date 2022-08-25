@@ -1,4 +1,4 @@
-<button class="fieldCss" (click)="revealField(field)" (contextmenu)="markBomb($event, field)"
+<button class="fieldCss" (click)="revealField()" (contextmenu)="markBomb($event, field)"
     [ngClass]="{'bomb': field.exploded, 'emptyField': field.empty}">
     <ng-container *ngIf="field.empty && (field.bombCount > 0)">
         <label [ngClass]="{
