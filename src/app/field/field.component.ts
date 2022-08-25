@@ -1,8 +1,10 @@
 import { Component, Input, OnInit } from '@angular/core';
-import { MatDialog } from '@angular/material/dialog';
-import { ClearedFieldsComponent } from '../cleared-fields/cleared-fields.component';
 import { Field } from '../shared/field';
 import { GameStateService } from '../shared/game-state.service';
+import { GameService } from '../shared/game.service';
+import { Position } from '../shared/position';
+import { RevealFieldRequest } from '../shared/request/revealFieldRequest';
+import { SignalrService } from '../shared/websockets/signalr.service';
 
 @Component({
   selector: 'app-field',
@@ -13,33 +15,28 @@ export class FieldComponent implements OnInit {
 
   @Input()
   public field!: Field;
+  private sR!: boolean;
 
   constructor(
     public gameState: GameStateService,
-    public dialog: MatDialog
-  ) { }
+    public gameService: GameService,
+    public signalRService: SignalrService
+  ) {
+    this.sR = gameState.signalR;
+  }
 
   ngOnInit(): void {
   }
 
-  public checkBomb(field: Field): void {
-    if (field.bombMark || this.gameState.gameOverBool) {
-      return;
+  public revealField(): void {
+    var request = new RevealFieldRequest(this.gameState.gameId, new Position(this.field.x, this.field.y));
+    if (!this.sR) {
+      this.gameService.revealField(request).subscribe((response) => {
+        this.gameService.handleRevealFieldResponse(response, this.field.x, this.field.y, this.field);
+      });
+    } else {
+      this.signalRService.revealField(request);
     }
-    this.gameState.startTimer();
-    this.gameState.click();
-    field.visible = true;
-    this.gameState.findAllFields(field);
-    if (field.bomb) {
-      this.gameState.gameOverBool = true;
-      this.gameState.gameOver();
-    }
-    
-    this.gameState.checkFields$.next(null);
-    if (!this.gameState.checkClearedAllFields()) {
-      return;
-    }
-    this.dialog.open(ClearedFieldsComponent);
   }
 
   public markBomb(event: any, field: Field): void {

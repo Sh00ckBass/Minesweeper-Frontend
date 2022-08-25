@@ -11,6 +11,7 @@ import { MatDialogModule } from '@angular/material/dialog';
 import { TopbarComponent } from './topbar/topbar.component';
 import { FieldComponent } from './field/field.component';
 import { ClearedFieldsComponent } from './cleared-fields/cleared-fields.component';
+import { HttpClientModule } from '@angular/common/http';
 
 @NgModule({
   declarations: [
@@ -26,7 +27,8 @@ import { ClearedFieldsComponent } from './cleared-fields/cleared-fields.componen
     BrowserModule,
     AppRoutingModule,
     BrowserAnimationsModule,
-    MatDialogModule
+    MatDialogModule,
+    HttpClientModule
   ],
   providers: [],
   bootstrap: [AppComponent]

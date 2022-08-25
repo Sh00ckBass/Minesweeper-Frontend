@@ -3,7 +3,11 @@ import { Field } from '../shared/field';
 import { MatDialog } from '@angular/material/dialog';
 import { GameStateService } from '../shared/game-state.service';
 import { GameoverComponent } from '../gameover/gameover.component';
+import { GameService } from '../shared/game.service';
 import { FieldSize } from '../shared/field-size';
+import { ClearedField } from '../shared/clearedfield';
+import { RevealBombsResponse } from '../shared/response/revealBombsResponse';
+import { SignalrService } from '../shared/websockets/signalr.service';
 
 @Component({
   selector: 'app-playfield',
@@ -12,218 +16,121 @@ import { FieldSize } from '../shared/field-size';
 })
 export class PlayfieldComponent implements OnInit {
 
-  public rowCount: number = 9;
-  public columnCount: number = 9;
-  public bombCount: number = 10;
-  public tempCount: number = 0;
-
   public playField: Field[][] = [];
-  public emptyFields: Field[] = [];
-  public bombs: Field[] = [];
+  private size: number = 9;
 
   constructor(
-    private gameStateService: GameStateService,
-    public dialog: MatDialog
+    private gameState: GameStateService,
+    private gameService: GameService,
+    public dialog: MatDialog,
+    public signalR: SignalrService,
+    public signalRService: SignalrService
   ) {
+    this.signalRService.startConnection();
+    this.signalRService.addStartGame();
+    this.signalRService.addRevealField();
+    this.signalRService.addRevealBombs();
   }
 
   ngOnInit(): void {
-    this.gameStateService.restart$.subscribe(() => this.resetGame());
-    this.gameStateService.setFieldSize$.subscribe((value) => this.setFieldSize(value));
-    this.gameStateService.findAllFields$.subscribe((value) => this.findAllFields(value));
-    this.gameStateService.gameOver$.subscribe(() => this.onGameOver());
-    this.gameStateService.checkFields$.subscribe(() => this.checkClearedAllFields());
+    setTimeout(() => this.register(), 1000);
   }
 
-  public setFieldSize(fieldSize: FieldSize): void {
-    var size: number = 9;
-    var bombCount: number = 10;
-    switch (fieldSize) {
-      case FieldSize.Small:
-        bombCount = 10;
-        break;
-      case FieldSize.Medium:
-        size = 16;
-        bombCount = 40;
-        break;
-      case FieldSize.Large:
-        size = 22;
-        bombCount = 100;
-        break;
+  private register(): void {
+    this.gameState.updateField$.subscribe((value) => this.updateField(value.x, value.y, value.bombCount, value.bomb, value.visible));
+    this.gameState.restart$.subscribe(() => this.resetGame());
+    this.gameState.gameOver$.subscribe(() => this.onGameOver());
+    this.gameState.revealClearedField$.subscribe((clearedField) => this.revealClearedField(clearedField));
+    this.gameState.revealBombs$.subscribe((bombsResponse) => this.revealBombs(bombsResponse));
+  }
+
+  public updateField(x: number, y: number, bombCount: number, bomb: boolean, visible: boolean): void {
+    if (x < 0 || y < 0 || x > this.size || y > this.size) {
+      return;
     }
-    this.rowCount = size;
-    this.columnCount = size;
-    this.bombCount = bombCount;
-    this.resetGame();
+    var field = this.playField[y][x];
+    field.bombCount = bombCount;
+    field.bomb = bomb;
+    field.visible = visible;
   }
 
-   public initializeField(): void {
+  public initializeField(): void {
     var playField: Field[][] = [];
-    this.tempCount = 0;
-    this.bombs = [];
-    for (var y = 0; y < this.rowCount; y++) {
+    this.changeFieldSize();
+    for (var y = 0; y < this.size; y++) {
       playField[y] = [];
-      for (var x = 0; x < this.columnCount; x++) {
+      for (var x = 0; x < this.size; x++) {
         playField[y][x] = new Field(x, y);
       }
     }
     this.playField = playField;
   }
 
-  public initialzeBombs(): void {
-    if (this.tempCount == this.bombCount) {
-      return;
-    }
-    var field = this.playField[Math.floor(Math.random() * this.rowCount)][Math.floor(Math.random() * this.columnCount)];
-    if (!field.bomb) {
-      field.bomb = true;
-      this.tempCount++;
-      this.bombs.push(field);
-    }
-    this.initialzeBombs();
-  }
-
-  public calculateFieldType(): void {
-    for (var y = 0; y < this.rowCount; y++) {
-      for (var x = 0; x < this.columnCount; x++) {
-        var currentField = this.playField[y][x];
-        if (!currentField.bomb) {
-          this.findBombCount(currentField);
-        }
-      }
-    }
-  }
-
-  public findBombCount(currentField: Field): void {
-    var xCf = currentField.x;
-    var yCf = currentField.y;
-    for (var y = yCf - 1; y <= yCf + 1; y++) {
-      for (var x = xCf - 1; x <= xCf + 1; x++) {
-        if (y < 0 || x < 0 || y >= this.rowCount || x >= this.columnCount) {
-          continue;
-        }
-        var field = this.playField[y][x];
-        if (field != currentField) {
-          if (field.bomb) {
-            currentField.bombCount++;
-          }
-        }
-      }
-    }
-  }
-
-  public findAllFields(currentField: Field): void {
-    var x = currentField.x;
-    var y = currentField.y;
-
-    if (this.emptyFields.includes(currentField) ||
-      currentField.bombCount != 0 ||
-      currentField.bomb ||
-      x < 0 && y < 0) {
-      return;
-    }
-
-    this.emptyFields.push(currentField);
-    this.checkClearedAllFields();
-    var topY = y - 1;
-    if (topY >= 0 && topY < this.rowCount) {
-      var top = this.playField[topY][x];
-      if (top.bombCount == 0) {
-        if (!top.bomb) {
-          top.visible = true;
-          this.findAllFields(top);
-        }
-      } else {
-        top.visible = true;
-      }
-    }
-
-    var bottomY = y + 1;
-    if (bottomY >= 0 && bottomY < this.rowCount) {
-      var bottom = this.playField[bottomY][x];
-      if (bottom.bombCount == 0) {
-        if (!bottom.bomb) {
-          bottom.visible = true;
-          this.findAllFields(bottom);
-        }
-      } else {
-        bottom.visible = true;
-      }
-    }
-
-    var leftX = x - 1;
-    if (leftX >= 0 && leftX < this.columnCount) {
-      var left = this.playField[y][leftX];
-      if (left.bombCount == 0) {
-        if (!left.bomb) {
-          left.visible = true;
-          this.findAllFields(left);
-        }
-      } else {
-        left.visible = true;
-      }
-    }
-
-    var rightX = x + 1;
-    if (rightX >= 0 && rightX < this.columnCount) {
-      var right = this.playField[y][rightX];
-      if (right.bombCount == 0) {
-        if (!right.bomb) {
-          right.visible = true;
-          this.findAllFields(right);
-        }
-      } else {
-        right.visible = true;
-      }
-    }
-  }
-
   public resetGame(): void {
-    this.gameStateService.resetTimer();
-    this.gameStateService.resetClicks();
-    this.gameStateService.gameOverBool = false;
+    this.gameState.resetTimer();
+    this.gameState.resetClicks();
+    this.gameState.gameOverBool = false;
+
+    if (!this.gameState.signalR) {
+      this.gameService.startGame(this.gameState.fieldSize).subscribe((response) => {
+        this.gameState.gameId = response;
+      });
+    } else {
+      this.signalR.startGame(this.gameState.fieldSize);
+    }
     this.initializeField();
-    this.initialzeBombs();
-    this.calculateFieldType();
   }
 
-  public checkClearedAllFields(): void {
-    var notCleared: number = 0;
-    for (var y = 0; y < this.rowCount; y++) {
-      for (var x = 0; x < this.columnCount; x++) {
-        var field: Field = this.playField[y][x];
-        if (!field.bomb) {
-          if (!field.visible) {
-            notCleared++;
-          }
-        }
-      }
+  public revealClearedField(clearedField: ClearedField): void {
+    var x: number = clearedField.position.x;
+    var y: number = clearedField.position.y;
+    var bombCount: number = clearedField.bombCount;
+    if (bombCount < 0) {
+      return;
     }
-    var isCleared: boolean = (notCleared == 0);
-    this.gameStateService.clearedAllFields = isCleared;
-    if (isCleared) {
-      this.gameStateService.stopTimer();
-      this.showAllBombs();
-      this.gameStateService.gameOverBool = true;
-    }
+    var field: Field = this.playField[y][x];
+    field.bombCount = bombCount;
+    field.visible = true;
+  }
+
+  public revealBombs(bombsResponse: RevealBombsResponse): void {
+    bombsResponse.bombs.forEach((pos) => {
+      var x: number = pos.x;
+      var y: number = pos.y;
+      var bombField: Field = this.playField[y][x];
+
+      bombField.bomb = true;
+      bombField.visible = true;
+    })
   }
 
   public onGameOver(): void {
-    if (this.gameStateService.timeInSec == 0) {
+    if (!this.gameState.gameOverBool) {
       return;
     }
-    this.gameStateService.stopTimer();
     this.dialog.open(GameoverComponent);
-
-    this.showAllBombs();
+    this.gameState.stopTimer();
+    this.gameState.gameOverBool = true;
   }
 
-  private showAllBombs(): void {
-    this.bombs.forEach((field) => {
-      if (!field.visible) {
-        field.visible = true;
-      }
-    });
+  private changeFieldSize(): void {
+    switch (this.gameState.fieldSize) {
+      case FieldSize.Small:
+        {
+          this.size = 9;
+          break;
+        }
+      case FieldSize.Medium:
+        {
+          this.size = 16;
+          break;
+        }
+      case FieldSize.Large:
+        {
+          this.size = 22;
+          break;
+        }
+    }
   }
 
 }

@@ -20,7 +20,7 @@ export class ButtonsComponent implements OnInit {
     this.gameStateService.restartGame();
   }
 
-  setFieldSize(size: number): void {
+  setFieldSize(size: FieldSize): void {
     this.gameStateService.setFieldSize(size);
   }
 

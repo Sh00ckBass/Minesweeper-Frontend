@@ -1,6 +1,11 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
+import { ClearedField } from './clearedfield';
 import { Field } from './field';
+import { FieldSize } from './field-size';
+import { Position } from './position';
+import { RevealBombsResponse } from './response/revealBombsResponse';
+import { RevealFieldResponse } from './response/revealFieldResponse';
 
 @Injectable({
   providedIn: 'root'
@@ -9,11 +14,12 @@ export class GameStateService {
 
   public restart$: BehaviorSubject<any> = new BehaviorSubject(null);
   public gameOver$: BehaviorSubject<any> = new BehaviorSubject(null);
-  public setFieldSize$: BehaviorSubject<number> = new BehaviorSubject(9);
+  public handleRevealField$: BehaviorSubject<any> = new BehaviorSubject({ field: new Field(-1, -1), response: new RevealFieldResponse(-1, -1, -1, []) });
   public timer$: BehaviorSubject<number> = new BehaviorSubject(0);
   public clickCount$: BehaviorSubject<number> = new BehaviorSubject(0);
-  public findAllFields$: BehaviorSubject<Field> = new BehaviorSubject(new Field(-1, -1));
-  public checkFields$: BehaviorSubject<any> = new BehaviorSubject(null);
+  public revealBombs$: BehaviorSubject<RevealBombsResponse> = new BehaviorSubject(new RevealBombsResponse([]));
+  public revealClearedField$: BehaviorSubject<ClearedField> = new BehaviorSubject(new ClearedField(new Position(-1, -1), -1));
+  public updateField$: BehaviorSubject<any> = new BehaviorSubject({ x: -1, y: -1, bombCount: -1, bomb: false, visible: false });
 
   public timeInSec: number = 0;
   public timerInterval: any = undefined;
@@ -21,10 +27,27 @@ export class GameStateService {
   public gameOverBool: boolean = false;
   public clearedAllFields: boolean = false;
 
+  public signalR: boolean = true;
+
+  public gameId: string = "";
+  public fieldSize: FieldSize = FieldSize.Small;
+
   constructor() { }
 
-  public checkClearedAllFields(): boolean {
-    return this.clearedAllFields;
+  public handleRevealField(x: number, y: number, response: RevealFieldResponse): void {
+    this.handleRevealField$.next({ x: x, y: y, response: response });
+  }
+
+  public updateField(x: number, y: number, bombCount: number, bomb: boolean, visible: boolean): void {
+    this.updateField$.next({ x: x, y: y, bombCount: bombCount, bomb: bomb, visible: visible });
+  }
+
+  public revealClearedField(clearedField: ClearedField): void {
+    this.revealClearedField$.next(clearedField);
+  }
+
+  public revealBombsField(revealBombs: RevealBombsResponse): void {
+    this.revealBombs$.next(revealBombs);
   }
 
   public restartGame(): void {
@@ -35,12 +58,8 @@ export class GameStateService {
     this.gameOver$.next(null);
   }
 
-  public findAllFields(fild: Field): void {
-    this.findAllFields$.next(fild);
-  }
-
   public setFieldSize(fieldSize: number): void {
-    this.setFieldSize$.next(fieldSize);
+    this.fieldSize = fieldSize;
   }
 
   public startTimer(): void {
@@ -61,6 +80,7 @@ export class GameStateService {
   public resetTimer(): void {
     this.timeInSec = 0;
     this.timer$.next(this.timeInSec);
+    this.stopTimer();
   }
 
   public click(): void {
