@@ -21,6 +21,9 @@ export class GameStateService {
   public revealClearedField$: BehaviorSubject<ClearedField> = new BehaviorSubject(new ClearedField(new Position(-1, -1), -1));
   public updateField$: BehaviorSubject<any> = new BehaviorSubject({ x: -1, y: -1, bombCount: -1, bomb: false, visible: false });
 
+  public updateFieldSize$: BehaviorSubject<any> = new BehaviorSubject(null);
+  public initialzeField$: BehaviorSubject<any> = new BehaviorSubject(null);
+
   public timeInSec: number = 0;
   public timerInterval: any = undefined;
   public clicks: number = 0;
@@ -36,6 +39,10 @@ export class GameStateService {
 
   public handleRevealField(x: number, y: number, response: RevealFieldResponse): void {
     this.handleRevealField$.next({ x: x, y: y, response: response });
+  }
+
+  public initializeField() {
+    this.initialzeField$.next(null);
   }
 
   public updateField(x: number, y: number, bombCount: number, bomb: boolean, visible: boolean): void {
@@ -60,6 +67,7 @@ export class GameStateService {
 
   public setFieldSize(fieldSize: number): void {
     this.fieldSize = fieldSize;
+    this.updateFieldSize$.next(null);
   }
 
   public startTimer(): void {

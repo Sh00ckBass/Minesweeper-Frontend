@@ -17,10 +17,12 @@ export class ButtonsComponent implements OnInit {
   }
 
   resetGame(): void {
+    localStorage.clear();
     this.gameStateService.restartGame();
   }
 
   setFieldSize(size: FieldSize): void {
+    localStorage.clear();
     this.gameStateService.setFieldSize(size);
   }
 
