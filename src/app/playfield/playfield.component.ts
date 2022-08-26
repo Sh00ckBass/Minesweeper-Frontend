@@ -8,6 +8,8 @@ import { FieldSize } from '../shared/field-size';
 import { ClearedField } from '../shared/clearedfield';
 import { RevealBombsResponse } from '../shared/response/revealBombsResponse';
 import { SignalrService } from '../shared/websockets/signalr.service';
+import { Position } from '../shared/position';
+import { RevealFieldResponse } from '../shared/response/revealFieldResponse';
 
 @Component({
   selector: 'app-playfield',
@@ -30,6 +32,7 @@ export class PlayfieldComponent implements OnInit {
     this.signalRService.addStartGame();
     this.signalRService.addRevealField();
     this.signalRService.addRevealBombs();
+    this.signalRService.addGetPlayField();
   }
 
   ngOnInit(): void {
@@ -42,6 +45,12 @@ export class PlayfieldComponent implements OnInit {
     this.gameState.gameOver$.subscribe(() => this.onGameOver());
     this.gameState.revealClearedField$.subscribe((clearedField) => this.revealClearedField(clearedField));
     this.gameState.revealBombs$.subscribe((bombsResponse) => this.revealBombs(bombsResponse));
+
+    this.gameState.updateFieldSize$.subscribe(() => {
+      this.changeFieldSize();
+      this.initializeField();
+    });
+    this.gameState.initialzeField$.subscribe(() => this.initializeField());
   }
 
   public updateField(x: number, y: number, bombCount: number, bomb: boolean, visible: boolean): void {
@@ -71,12 +80,41 @@ export class PlayfieldComponent implements OnInit {
     this.gameState.resetClicks();
     this.gameState.gameOverBool = false;
 
-    if (!this.gameState.signalR) {
-      this.gameService.startGame(this.gameState.fieldSize).subscribe((response) => {
-        this.gameState.gameId = response;
-      });
+    var gameId = localStorage.getItem("gameId");
+
+    if (gameId == null) {
+      if (!this.gameState.signalR) {
+        this.gameService.startGame(this.gameState.fieldSize).subscribe((response) => {
+          this.gameState.gameId = response;
+          localStorage.setItem("gameId", response);
+        });
+      } else {
+        this.signalR.startGame(this.gameState.fieldSize);
+      }
     } else {
-      this.signalR.startGame(this.gameState.fieldSize);
+      this.gameState.gameId = gameId;
+      if (!this.gameState.signalR) {
+        this.gameService.getSavedPlayField(gameId).subscribe((response) => {
+
+          var size: number = response.emptyFields.length;
+          this.gameState.setFieldSize(response.playFieldSize);
+          for (var i = 0; i < size; i++) {
+            var position: Position = response.emptyFields[i].position;
+            var bombCount: number = response.emptyFields[i].bombCount;
+            this.gameService.handleRevealFieldResponse(new RevealFieldResponse(0, 0, bombCount, []), position.x, position.y);
+          }
+
+        }, () => {
+          localStorage.clear();
+          this.resetGame();
+        });
+      } else {
+        this.signalRService.getPlayField(gameId).catch(() => {
+          localStorage.clear();
+          this.resetGame();
+        });
+        return;
+      }
     }
     this.initializeField();
   }
@@ -108,6 +146,7 @@ export class PlayfieldComponent implements OnInit {
     if (!this.gameState.gameOverBool) {
       return;
     }
+    localStorage.clear();
     this.dialog.open(GameoverComponent);
     this.gameState.stopTimer();
     this.gameState.gameOverBool = true;

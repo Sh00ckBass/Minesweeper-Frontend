@@ -29,6 +29,9 @@ export class FieldComponent implements OnInit {
   }
 
   public revealField(): void {
+    if (this.field.bombMark) {
+      return;
+    }
     var request = new RevealFieldRequest(this.gameState.gameId, new Position(this.field.x, this.field.y));
     if (!this.sR) {
       this.gameService.revealField(request).subscribe((response) => {

@@ -31,6 +31,10 @@ export class GameService {
     return this.httpClient.get<string>(environment.apiUrl + `game/start/${fieldSize.valueOf()}`);
   }
 
+  public getSavedPlayField(playFieldId: string): Observable<any> {
+    return this.httpClient.get<any>(environment.apiUrl + `game/playfield/${playFieldId}`);
+  }
+
   public revealField(requestData: RevealFieldRequest): Observable<RevealFieldResponse> {
     return this.httpClient.post<RevealFieldResponse>(environment.apiUrl + "game/revealfield", requestData);
   }

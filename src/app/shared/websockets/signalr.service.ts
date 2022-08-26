@@ -2,7 +2,9 @@ import { Injectable } from '@angular/core';
 import * as signalR from "@microsoft/signalr"
 import { FieldSize } from '../field-size';
 import { GameStateService } from '../game-state.service';
+import { Position } from '../position';
 import { RevealFieldRequest } from '../request/revealFieldRequest';
+import { RevealFieldResponse } from '../response/revealFieldResponse';
 
 @Injectable({
   providedIn: 'root'
@@ -18,7 +20,7 @@ export class SignalrService {
     this.hubConnection
       .start()
       .then(() => console.log("Connected via SignalR."))
-      .catch(error => console.log('Error while starting connection: ' + error))
+      .catch(error => console.log('Error while starting connection: ' + error));
   }
 
   public isConnected(): boolean {
@@ -28,6 +30,7 @@ export class SignalrService {
   public addStartGame(): void {
     this.hubConnection.on('startGame', (data) => {
       this.gameState.gameId = data;
+      localStorage.setItem("gameId", data);
     });
   }
 
@@ -43,6 +46,19 @@ export class SignalrService {
     })
   }
 
+  public addGetPlayField(): void {
+    this.hubConnection.on('getPlayField', (response) => {
+      var size: number = response.emptyFields.length;
+      this.gameState.setFieldSize(response.playFieldSize);
+      for (var i = 0; i < size; i++) {
+        var position: Position = response.emptyFields[i].position;
+        var bombCount: number = response.emptyFields[i].bombCount;
+        this.gameState.handleRevealField(position.x, position.y, new RevealFieldResponse(0, 0, bombCount, []));
+      }
+
+    })
+  }
+
   public startGame(fieldSize: FieldSize): void {
     this.hubConnection.invoke('StartGame', fieldSize)
   }
@@ -55,6 +71,10 @@ export class SignalrService {
   public revealBombs(playFieldId: string): void {
     this.hubConnection.invoke('RevealBombs', playFieldId)
       .catch(err => console.error(err));
+  }
+
+  public getPlayField(playFieldId: string): any {
+    return this.hubConnection.invoke<any>('GetPlayField', playFieldId)
   }
 
 }
